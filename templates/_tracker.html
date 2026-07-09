@@ -1,0 +1,18 @@
+<script>
+  window.goatcounter = {
+    // 1. Explicitly define your endpoint so it never says "no endpoint found"
+    endpoint: 'https://andratx.goatcounter.com/count',
+    
+    // 2. Force a valid path string so it never returns null
+    path: function() {
+      // Strips query parameters/hashes and ensures a clean path name like "/notebooks/analysis.html"
+      return window.location.pathname || '/';
+    },
+
+    // 3. Allow local testing and frames just in case
+    allow_local: true,
+    allow_frame: true
+  };
+</script>
+
+<script async src="https://gc.zgo.at/count.js"></script>
