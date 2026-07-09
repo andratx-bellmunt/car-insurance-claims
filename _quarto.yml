@@ -1,0 +1,21 @@
+project:
+  type: default
+  output-dir: docs
+  render:
+    - src/notebooks/carinsurance.ipynb
+  post-render: 
+    - mv docs/src/notebooks/carinsurance.html docs/
+    - rm -rf docs/src/
+
+format:
+  html:
+    embed-resources: true
+    code-fold: false
+    html-math-method: katex
+    toc: true
+    toc-depth: 2
+    toc-title: "Contents"
+    number-sections: false
+    theme: cosmo
+    include-after-body:
+      - templates/_tracker.html  # Adds goatcounter tracker to the HTML file

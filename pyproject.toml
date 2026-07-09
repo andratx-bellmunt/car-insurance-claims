@@ -1,0 +1,15 @@
+[project]
+name = "car-insurance-claims"
+version = "0.1.0"
+description = "Car insurance claim prediction with GLMs and XGBoost"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ipykernel>=7.3.0",
+    "jupyter>=1.1.1",
+    "pandas>=3.0.3",
+    "plotly>=6.9.0",
+    "scikit-learn>=1.9.0",
+    "statsmodels>=0.14.6",
+    "xgboost>=3.3.0",
+]
