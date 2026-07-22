@@ -2,9 +2,11 @@ project:
   type: default
   output-dir: docs
   render:
-    - src/notebooks/carinsurance.ipynb
+    - src/notebooks/eda.ipynb
+    - src/notebooks/modeling.ipynb
   post-render: 
-    - mv docs/src/notebooks/carinsurance.html docs/
+    - mv docs/src/notebooks/eda.html docs/
+    - mv docs/src/notebooks/modeling.html docs/
     - rm -rf docs/src/
 
 format:
