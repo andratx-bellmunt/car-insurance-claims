@@ -1,7 +1,8 @@
 """Plotting utilities."""
 
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -139,6 +140,98 @@ def plot_exposure_by_claim_boxplot(df):
         showlegend=False,
         template="plotly_white",
         yaxis_range=[0, 2.1],  # Focuses on our 0-2 year range
+    )
+
+    fig.show()
+
+
+def _get_lorenz_coords(actual: np.ndarray, predicted: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    # Sort actual values based on predictions (highest to lowest)
+    order = np.argsort(predicted)[::-1]
+    actual_sorted = actual.iloc[order].values
+
+    # Cumulative sums
+    cum_actual = np.cumsum(actual_sorted) / np.sum(actual_sorted)
+    cum_pop = np.arange(1, len(actual) + 1) / len(actual)
+
+    # Prepend (0,0)
+    return np.insert(cum_pop, 0, 0), np.insert(cum_actual, 0, 0)
+
+
+def plot_lorenz_curves(df: pd.DataFrame) -> None:
+    # Calculate coordinates for models
+    pop_glm, actual_glm = _get_lorenz_coords(df["ClaimNb"], df["glm_pred"])
+    pop_xgb, actual_xgb = _get_lorenz_coords(df["ClaimNb"], df["xgb_pred"])
+    pop_bmk, actual_bmk = _get_lorenz_coords(df["ClaimNb"], df["bmk_pred"])
+
+    # Plot
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(x=pop_glm, y=actual_glm, name="GLM Lorenz Curve", line=dict(color="blue")))
+    fig.add_trace(go.Scatter(x=pop_xgb, y=actual_xgb, name="XGBoost Lorenz Curve", line=dict(color="orange")))
+    fig.add_trace(go.Scatter(x=pop_bmk, y=actual_bmk, name="Benchmark Lorenz Curve", line=dict(color="green")))
+    fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], name="Random Selection (Null)", line=dict(color="gray", dash="dash")))
+
+    fig.update_layout(
+        title="Lorenz Curve: Benchmark vs GLM vs XGBoost (Test Set)",
+        xaxis_title="Cumulative Share of Population (Highest to Lowest Risk)",
+        yaxis_title="Cumulative Share of Actual Claims Captured",
+        template="plotly_white",
+        height=600,
+        width=800,
+        xaxis_range=[0.0, 1.0],
+        yaxis_scaleanchor="x",
+        yaxis_scaleratio=1,
+    )
+
+    fig.show()
+
+
+def plot_double_lift_chart(df_test: pd.DataFrame) -> None:
+    # Calculate ratio
+    df_test["ratio"] = df_test["xgb_pred"] / df_test["glm_pred"]
+
+    # Sort into 10 buckets (deciles)
+    df_test["decile"] = pd.qcut(df_test["ratio"], 10, labels=False)
+
+    # Aggregate actual vs predicted frequency
+    lift_data = (
+        df_test.groupby("decile")
+        .agg({"ClaimNb": "sum", "exposure_stable": "sum", "glm_pred": "sum", "xgb_pred": "sum"})
+        .reset_index()
+    )
+
+    lift_data["actual_freq"] = lift_data["ClaimNb"] / lift_data["exposure_stable"]
+    lift_data["glm_freq"] = lift_data["glm_pred"] / lift_data["exposure_stable"]
+    lift_data["xgb_freq"] = lift_data["xgb_pred"] / lift_data["exposure_stable"]
+
+    # Plot
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Bar(x=lift_data["decile"], y=lift_data["actual_freq"], name="Actual Frequency", marker_color="lightgrey")
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=lift_data["decile"], y=lift_data["glm_freq"], name="GLM Pred Frequency", line=dict(color="blue", width=3)
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=lift_data["decile"],
+            y=lift_data["xgb_freq"],
+            name="XGBoost Pred Frequency",
+            line=dict(color="orange", width=3),
+        )
+    )
+
+    fig.update_layout(
+        title="Double Lift Chart: Deciles of (XGB / GLM) Ratio",
+        xaxis_title="Decile (1=GLM overestimates relative to XGB, 10=XGB overestimates relative to GLM)",
+        yaxis_title="Claim Frequency (actual)",
+        template="plotly_white",
+        height=600,
+        barmode="group",
     )
 
     fig.show()
